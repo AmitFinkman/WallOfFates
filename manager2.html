@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wall of Fates [MANAGER]</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body{font-family:'Inter',sans-serif;background-color:#1a202c;color:#e2e8f0}
+        .card{transform-style:preserve-3d;transition:transform .6s;cursor:pointer}
+        .card.is-flipped{transform:rotateY(180deg)}
+        .card-face{backface-visibility:hidden;-webkit-backface-visibility:hidden;position:absolute;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;border-radius:.5rem}
+        .card-face-back{transform:rotateY(180deg);background-color:#4a5568}
+        input[type=color]{-webkit-appearance:none;-moz-appearance:none;appearance:none;width:44px;height:44px;border:none;cursor:pointer;background-color:transparent}
+        input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+        input[type=color]::-webkit-color-swatch{border:2px solid #e2e8f0;border-radius:.5rem}
+        .palette-color.selected{transform:scale(1.15);box-shadow:0 0 0 3px #fff,0 0 15px #fff;border-radius:.5rem}
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-7xl mx-auto">
+        <div id="setup-screen" class="bg-gray-800 p-8 rounded-lg shadow-2xl transition-opacity duration-500">
+            <h1 class="text-4xl font-bold text-center mb-2 text-white" style="font-family:'Rubik',sans-serif">Wall of Fates Setup</h1>
+            <p class="text-center text-gray-400 mb-8">Set up your game board.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-4">
+                    <div>
+                        <label for="num-entries" class="block mb-2 text-sm font-medium text-gray-300">How many entries?</label>
+                        <input type="number" id="num-entries" value="24" min="1" max="100" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5">
+                    </div>
+                    <div>
+                        <label for="num-colors" class="block mb-2 text-sm font-medium text-gray-300">How many colors?</label>
+                        <input type="number" id="num-colors" value="4" min="1" max="10" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5">
+                    </div>
+                </div>
+                <div>
+                    <label class="block mb-2 text-sm font-medium text-gray-300">Choose your colors</label>
+                    <div id="color-pickers-container" class="flex flex-wrap gap-4 p-4 bg-gray-700 rounded-lg"></div>
+                </div>
+            </div>
+            <div class="mt-8 text-center">
+                <button id="start-game-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg text-lg">Build the Wall & Start</button>
+            </div>
+        </div>
+        
+        <div id="game-screen" class="hidden transition-opacity duration-500">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-3xl font-bold text-white" style="font-family:'Rubik',sans-serif">Wall of Fates</h1>
+                <div class="space-x-2">
+                    <button id="fullscreen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Full Screen</button>
+                    <button id="toggle-key-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Show Key</button>
+                    <button id="reset-game-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">New Game</button>
+                </div>
+            </div>
+            <div class="mb-6">
+                <p class="text-center text-gray-400 mb-3">Select a color to claim an entry</p>
+                <div id="team-color-palette" class="flex justify-center items-center flex-wrap gap-4 p-2 rounded-lg bg-gray-900/50"></div>
+            </div>
+            <div id="game-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4"></div>
+            
+            <!-- Game Key Modal -->
+            <div id="game-key-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+                <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold">Game Master's Key</h2>
+                        <button id="close-key-btn" class="text-gray-400 hover:text-white text-3xl">&times;</button>
+                    </div>
+                    <div id="game-key-content" class="text-left bg-gray-900 p-4 rounded-md"></div>
+                    <div class="mt-4 text-right">
+                        <button id="copy-key-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Copy Key</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase imports - Using Realtime Database instead of Firestore
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCudE7pr3G1J1CYT3qL9_GsVEKs00-Sye0",
+            authDomain: "wall-of-fates.firebaseapp.com",
+            databaseURL: "https://wall-of-fates-default-rtdb.europe-west1.firebasedatabase.app/", // Your Realtime Database URL
+            projectId: "wall-of-fates",
+            storageBucket: "wall-of-fates.appspot.com",
+            messagingSenderId: "767396028639",
+            appId: "1:767396028639:web:132afadf66ae304226496a"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        const gameStateRef = ref(database, 'gameState');
+
+        // DOM elements
+        const setupScreen = document.getElementById('setup-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const numEntriesInput = document.getElementById('num-entries');
+        const numColorsInput = document.getElementById('num-colors');
+        const colorPickersContainer = document.getElementById('color-pickers-container');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const resetGameBtn = document.getElementById('reset-game-btn');
+        const teamColorPalette = document.getElementById('team-color-palette');
+        const gameGrid = document.getElementById('game-grid');
+        const gameKeyModal = document.getElementById('game-key-modal');
+        const gameKeyContent = document.getElementById('game-key-content');
+        const toggleKeyBtn = document.getElementById('toggle-key-btn');
+        const closeKeyBtn = document.getElementById('close-key-btn');
+        const copyKeyBtn = document.getElementById('copy-key-btn');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+        // Game state
+        const defaultColors = ['#4f46e5', '#db2777', '#d97706', '#16a34a', '#0891b2', '#6d28d9', '#e11d48', '#059669'];
+        let gameData = [];
+        let activeColor = null;
+
+        // Generate color pickers based on number input
+        function generateColorPickers() {
+            const numColors = parseInt(numColorsInput.value, 10);
+            colorPickersContainer.innerHTML = '';
+            
+            for (let i = 0; i < numColors; i++) {
+                const input = document.createElement('input');
+                input.type = 'color';
+                input.className = 'color-picker rounded-lg';
+                input.value = defaultColors[i % defaultColors.length];
+                colorPickersContainer.appendChild(input);
+            }
+        }
+
+        // Shuffle array utility
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Generate secret scores with weighted distribution
+        function generateSecretScores(numEntries) {
+            const scores = [];
+            const weightedScores = [
+                { score: 500, weight: 2 },
+                { score: 400, weight: 3 },
+                { score: 300, weight: 4 },
+                { score: 200, weight: 5 },
+                { score: 150, weight: 6 },
+                { score: 100, weight: 7 },
+                { score: 0, weight: 8 }
+            ];
+
+            // Always include one 1000 point entry
+            if (numEntries > 0) {
+                scores.push(1000);
+            }
+
+            // Fill remaining entries with weighted distribution
+            const remainingEntries = numEntries - 1;
+            if (remainingEntries > 0) {
+                const pool = weightedScores.flatMap(item => 
+                    Array(item.weight).fill(item.score)
+                );
+                
+                if (pool.length === 0) pool.push(0);
+                
+                for (let i = 0; i < remainingEntries; i++) {
+                    const randomIndex = Math.floor(Math.random() * pool.length);
+                    scores.push(pool[randomIndex]);
+                }
+            }
+
+            return scores;
+        }
+
+        // Update Firebase with current game state
+        async function updateGameStateInFirebase() {
+            try {
+                const teamColors = Array.from(teamColorPalette.querySelectorAll('.palette-color'))
+                    .map(div => div.style.backgroundColor);
+
+                const gameState = {
+                    cards: gameData,
+                    teamColors: teamColors,
+                    lastUpdated: new Date().toISOString()
+                };
+
+                console.log('🔄 MANAGER: Updating Firebase with game state:', gameState);
+                console.log('🔄 MANAGER: Number of cards:', gameData.length);
+                console.log('🔄 MANAGER: Team colors:', teamColors);
+                
+                await set(gameStateRef, gameState);
+                console.log('✅ MANAGER: Game state updated successfully in Firebase');
+            } catch (error) {
+                console.error('❌ MANAGER: Error updating Firebase:', error);
+                alert('Failed to update Firebase: ' + error.message);
+            }
+        }
+
+        // Reset game (clear Firebase)
+        async function resetGameInFirebase() {
+            try {
+                const emptyState = {
+                    cards: [],
+                    teamColors: [],
+                    lastUpdated: new Date().toISOString()
+                };
+                await set(gameStateRef, emptyState);
+                console.log('Game reset in Firebase');
+            } catch (error) {
+                console.error('Error resetting Firebase:', error);
+            }
+        }
+
+        // Start the game
+        async function startGame() {
+            const numEntries = parseInt(numEntriesInput.value, 10);
+            const teamColors = Array.from(colorPickersContainer.querySelectorAll('.color-picker'))
+                .map(input => input.value);
+            
+            // Generate and shuffle secret scores
+            const secretScores = shuffleArray(generateSecretScores(numEntries));
+            
+            // Clear existing game
+            gameGrid.innerHTML = '';
+            teamColorPalette.innerHTML = '';
+            gameData = [];
+            activeColor = null;
+
+            // Create team color palette
+            teamColors.forEach(color => {
+                const colorDiv = document.createElement('div');
+                colorDiv.className = 'palette-color w-10 h-10 rounded-md cursor-pointer transition-transform';
+                colorDiv.style.backgroundColor = color;
+                colorDiv.dataset.color = color;
+                colorDiv.onclick = (e) => {
+                    // Remove previous selection
+                    document.querySelector('.palette-color.selected')?.classList.remove('selected');
+                    // Add selection to clicked color
+                    e.currentTarget.classList.add('selected');
+                    activeColor = e.currentTarget.dataset.color;
+                };
+                teamColorPalette.appendChild(colorDiv);
+            });
+
+            // Create game cards
+            for (let i = 0; i < secretScores.length; i++) {
+                const cardData = {
+                    entry: i + 1,
+                    secret: secretScores[i],
+                    color: null,
+                    isFlipped: false
+                };
+                gameData.push(cardData);
+
+                // Create card DOM elements
+                const container = document.createElement('div');
+                container.className = 'aspect-square relative';
+
+                const card = document.createElement('div');
+                card.className = 'card w-full h-full';
+                card.dataset.entry = i + 1;
+
+                const front = document.createElement('div');
+                front.className = 'card-face card-face-front';
+                front.style.backgroundColor = '#374151';
+                front.innerHTML = `<span class="text-4xl font-bold text-white">${i + 1}</span>`;
+
+                const back = document.createElement('div');
+                back.className = 'card-face card-face-back';
+                back.innerHTML = `<span class="text-4xl font-bold text-white">${secretScores[i]}</span>`;
+
+                card.appendChild(front);
+                card.appendChild(back);
+                container.appendChild(card);
+                gameGrid.appendChild(container);
+
+                // Add click handler
+                card.onclick = () => handleCardClick(card, front, i);
+            }
+
+            // Generate game key
+            populateGameKey();
+
+            // Switch to game screen
+            setupScreen.classList.add('opacity-0');
+            setTimeout(() => {
+                setupScreen.classList.add('hidden');
+                gameScreen.classList.remove('hidden');
+                gameScreen.classList.add('opacity-100');
+            }, 500);
+
+            // Update Firebase with initial game state
+            await updateGameStateInFirebase();
+        }
+
+        // Handle card click
+        async function handleCardClick(cardElement, frontElement, cardIndex) {
+            const cardData = gameData[cardIndex];
+            
+            if (cardData.isFlipped) {
+                return; // Card already flipped
+            }
+
+            if (cardData.color) {
+                // Card has color, flip it to show secret
+                cardData.isFlipped = true;
+                cardElement.classList.add('is-flipped');
+            } else if (activeColor) {
+                // Assign color to card
+                cardData.color = activeColor;
+                frontElement.style.backgroundColor = activeColor;
+            } else {
+                alert('Please select a team color first!');
+                return;
+            }
+
+            // Update Firebase
+            await updateGameStateInFirebase();
+        }
+
+        // Reset game
+        async function resetGame() {
+            gameScreen.classList.remove('opacity-100');
+            gameScreen.classList.add('hidden');
+            setupScreen.classList.remove('hidden');
+            setupScreen.classList.remove('opacity-0');
+            gameKeyModal.classList.add('hidden');
+            
+            // Clear Firebase
+            await resetGameInFirebase();
+        }
+
+        // Populate game key modal
+        function populateGameKey() {
+            gameKeyContent.innerHTML = '';
+            
+            const sortedCards = [...gameData].sort((a, b) => a.secret - b.secret);
+            const list = document.createElement('ul');
+            list.className = 'space-y-2 font-mono';
+            
+            sortedCards.forEach(card => {
+                const item = document.createElement('li');
+                item.innerHTML = `<pre>Entry #${String(card.entry).padStart(2, '0')} -> Reveals: ${String(card.secret).padStart(4, ' ')}</pre>`;
+                list.appendChild(item);
+            });
+            
+            gameKeyContent.appendChild(list);
+        }
+
+        // Copy key to clipboard
+        function copyKeyToClipboard() {
+            const keyText = gameData
+                .map(card => `Entry #${card.entry} -> Reveals: ${card.secret}`)
+                .join('\n');
+            
+            navigator.clipboard.writeText(keyText).then(() => {
+                const originalText = copyKeyBtn.textContent;
+                copyKeyBtn.textContent = 'Copied!';
+                setTimeout(() => copyKeyBtn.textContent = originalText, 2000);
+            }).catch(err => console.error('Failed to copy', err));
+        }
+
+        // Toggle fullscreen
+        function toggleFullScreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen().catch(err => 
+                    console.error('Fullscreen error', err)
+                );
+            }
+        }
+
+        // Event listeners
+        window.addEventListener('load', generateColorPickers);
+        numColorsInput.addEventListener('change', generateColorPickers);
+        startGameBtn.addEventListener('click', startGame);
+        resetGameBtn.addEventListener('click', resetGame);
+        toggleKeyBtn.addEventListener('click', () => gameKeyModal.classList.remove('hidden'));
+        closeKeyBtn.addEventListener('click', () => gameKeyModal.classList.add('hidden'));
+        copyKeyBtn.addEventListener('click', copyKeyToClipboard);
+        fullscreenBtn.addEventListener('click', toggleFullScreen);
+        
+        // Close modal when clicking outside
+        gameKeyModal.addEventListener('click', (e) => {
+            if (e.target === gameKeyModal) {
+                gameKeyModal.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
