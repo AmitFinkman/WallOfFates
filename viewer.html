@@ -9,28 +9,63 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
     <style>
-        body{font-family:'Inter',sans-serif;background-color:#1a202c;color:#e2e8f0}.card{transform-style:preserve-3d;transition:transform .6s}.card.is-flipped{transform:rotateY(180deg)}.card-face{backface-visibility:hidden;-webkit-backface-visibility:hidden;position:absolute;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;border-radius:.5rem}.card-face-back{transform:rotateY(180deg);background-color:#4a5568}
+        body{font-family:'Inter',sans-serif;background-color:#1a202c;color:#e2e8f0}
+        .card{transform-style:preserve-3d;transition:transform .6s}
+        .card.is-flipped{transform:rotateY(180deg)}
+        .card-face{backface-visibility:hidden;-webkit-backface-visibility:hidden;position:absolute;top:0;left:0;width:100%;height:100%;display:flex;justify-content:center;align-items:center;border-radius:.5rem}
+        .card-face-back{transform:rotateY(180deg);background-color:#4a5568}
         #click-blocker { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 10; cursor: not-allowed; }
         #message-box { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #ef4444; color: white; padding: 10px 20px; border-radius: 8px; z-index: 100; opacity: 0; transition: opacity 0.3s ease-in-out; pointer-events: none; }
         #message-box.show { opacity: 1; }
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            z-index: 100;
+        }
+        .status-connected {
+            background-color: #059669;
+            color: white;
+        }
+        .status-waiting {
+            background-color: #d97706;
+            color: white;
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
+    <!-- Connection Status -->
+    <div id="connection-status" class="connection-status status-waiting">
+        Connecting...
+    </div>
+
     <div class="w-full max-w-7xl mx-auto">
         <div id="viewer-screen">
             <div id="waiting-message" class="text-center">
                 <h1 class="text-3xl font-bold text-white mb-4" style="font-family:'Rubik',sans-serif">Wall of Fates</h1>
-                <p class="text-xl text-gray-400">Waiting for the manager to start the game...</p>
+                <p class="text-xl text-gray-400 mb-4">Waiting for the manager to start the game...</p>
+                <div class="flex justify-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                </div>
             </div>
+            
             <div id="game-content" class="hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-bold text-white" style="font-family:'Rubik',sans-serif">Wall of Fates</h1>
-                    <div><button id="fullscreen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Full Screen</button></div>
+                    <div>
+                        <button id="fullscreen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Full Screen</button>
+                    </div>
                 </div>
+                
                 <div class="mb-6">
-                    <p class="text-center text-gray-400 mb-3">Game in Progress</p>
+                    <p class="text-center text-gray-400 mb-3">Game in Progress - View Only</p>
                     <div id="team-color-palette" class="flex justify-center items-center flex-wrap gap-4 p-2 rounded-lg bg-gray-900/50"></div>
                 </div>
+                
                 <div id="game-grid-container" class="relative">
                     <div id="game-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4"></div>
                     <div id="click-blocker"></div>
@@ -38,11 +73,11 @@
             </div>
         </div>
     </div>
+    
     <div id="message-box">Only the manager can interact with the board.</div>
 
-    <!-- SCRIPT SECTION -->
     <script type="module">
-        // FIX: Import the required functions from the modern Firebase SDK
+        // Firebase imports
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -55,46 +90,145 @@
             appId: "1:767396028639:web:132afadf66ae304226496a"
         };
 
-        // FIX: Initialize Firebase using the modern syntax
+        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const gameStateRef = doc(db, "games", "live-game");
 
-        const teamColorPalette = document.getElementById('team-color-palette'), gameGrid = document.getElementById('game-grid'), fullscreenBtn = document.getElementById('fullscreen-btn'), waitingMessage = document.getElementById('waiting-message'), gameContent = document.getElementById('game-content'), clickBlocker = document.getElementById('click-blocker'), messageBox = document.getElementById('message-box');
+        // DOM elements
+        const teamColorPalette = document.getElementById('team-color-palette');
+        const gameGrid = document.getElementById('game-grid');
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        const waitingMessage = document.getElementById('waiting-message');
+        const gameContent = document.getElementById('game-content');
+        const clickBlocker = document.getElementById('click-blocker');
+        const messageBox = document.getElementById('message-box');
+        const connectionStatus = document.getElementById('connection-status');
 
-        // This is the core real-time function. It listens for any change in the database.
-        onSnapshot(gameStateRef, (doc) => {
-            const docData = doc.data();
-            if (doc.exists() && docData && docData.cards && docData.cards.length > 0) {
-                console.log("Received update from Firebase. Rendering board.");
-                waitingMessage.classList.add('hidden');
-                gameContent.classList.remove('hidden');
-                renderBoard(docData);
+        let messageTimeout;
+        let isConnected = false;
+
+        // Handle connection status
+        function updateConnectionStatus(connected) {
+            isConnected = connected;
+            if (connected) {
+                connectionStatus.textContent = 'Connected';
+                connectionStatus.className = 'connection-status status-connected';
             } else {
-                console.log("No game data found. Displaying waiting message.");
-                waitingMessage.classList.remove('hidden');
-                gameContent.classList.add('hidden');
+                connectionStatus.textContent = 'Connecting...';
+                connectionStatus.className = 'connection-status status-waiting';
             }
-        });
+        }
 
-        function renderBoard(state) {
-            gameGrid.innerHTML = ''; teamColorPalette.innerHTML = '';
-            if (state.teamColors) { state.teamColors.forEach(c => { const div = document.createElement('div'); div.className = 'palette-color w-10 h-10 rounded-md'; div.style.backgroundColor = c; teamColorPalette.appendChild(div); }); }
-            if (state.cards) {
-                state.cards.forEach(item => {
-                    const cont = document.createElement('div'); cont.className = 'aspect-square relative';
-                    const card = document.createElement('div'); card.className = 'card w-full h-full'; if (item.isFlipped) card.classList.add('is-flipped');
-                    const front = document.createElement('div'); front.className = 'card-face card-face-front'; front.style.backgroundColor = item.color || '#374151'; front.innerHTML = `<span class="text-4xl font-bold text-white">${item.entry}</span>`;
-                    const back = document.createElement('div'); back.className = 'card-face card-face-back'; back.innerHTML = `<span class="text-4xl font-bold text-white">${item.secret}</span>`;
-                    card.append(front, back); cont.append(card); gameGrid.append(cont);
+        // Render the game board based on Firebase data
+        function renderBoard(gameState) {
+            console.log('Rendering board with state:', gameState);
+            
+            // Clear existing content
+            gameGrid.innerHTML = '';
+            teamColorPalette.innerHTML = '';
+
+            // Render team colors
+            if (gameState.teamColors && gameState.teamColors.length > 0) {
+                gameState.teamColors.forEach(color => {
+                    const colorDiv = document.createElement('div');
+                    colorDiv.className = 'palette-color w-10 h-10 rounded-md';
+                    colorDiv.style.backgroundColor = color;
+                    teamColorPalette.appendChild(colorDiv);
+                });
+            }
+
+            // Render cards
+            if (gameState.cards && gameState.cards.length > 0) {
+                gameState.cards.forEach(cardData => {
+                    const container = document.createElement('div');
+                    container.className = 'aspect-square relative';
+
+                    const card = document.createElement('div');
+                    card.className = 'card w-full h-full';
+                    if (cardData.isFlipped) {
+                        card.classList.add('is-flipped');
+                    }
+
+                    const front = document.createElement('div');
+                    front.className = 'card-face card-face-front';
+                    front.style.backgroundColor = cardData.color || '#374151';
+                    front.innerHTML = `<span class="text-4xl font-bold text-white">${cardData.entry}</span>`;
+
+                    const back = document.createElement('div');
+                    back.className = 'card-face card-face-back';
+                    back.innerHTML = `<span class="text-4xl font-bold text-white">${cardData.secret}</span>`;
+
+                    card.appendChild(front);
+                    card.appendChild(back);
+                    container.appendChild(card);
+                    gameGrid.appendChild(container);
                 });
             }
         }
+
+        // Show interaction blocked message
+        function showBlockedMessage() {
+            clearTimeout(messageTimeout);
+            messageBox.classList.add('show');
+            messageTimeout = setTimeout(() => {
+                messageBox.classList.remove('show');
+            }, 2000);
+        }
+
+        // Toggle fullscreen
+        function toggleFullScreen() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else {
+                document.documentElement.requestFullscreen().catch(err => 
+                    console.error('Fullscreen error', err)
+                );
+            }
+        }
+
+        // Set up Firebase listener
+        console.log('Setting up Firebase listener...');
         
-        let messageTimeout;
-        clickBlocker.onclick = () => { clearTimeout(messageTimeout); messageBox.classList.add('show'); messageTimeout = setTimeout(() => messageBox.classList.remove('show'), 2000); };
-        function toggleFullScreen(){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(err=>console.error("Fullscreen error",err))}
+        const unsubscribe = onSnapshot(gameStateRef, (doc) => {
+            updateConnectionStatus(true);
+            
+            if (doc.exists()) {
+                const gameState = doc.data();
+                console.log('Received Firebase update:', gameState);
+                
+                // Check if game has started (has cards)
+                if (gameState.cards && gameState.cards.length > 0) {
+                    console.log('Game data found, showing game content');
+                    waitingMessage.classList.add('hidden');
+                    gameContent.classList.remove('hidden');
+                    renderBoard(gameState);
+                } else {
+                    console.log('No game data, showing waiting message');
+                    waitingMessage.classList.remove('hidden');
+                    gameContent.classList.add('hidden');
+                }
+            } else {
+                console.log('Document does not exist, showing waiting message');
+                waitingMessage.classList.remove('hidden');
+                gameContent.classList.add('hidden');
+            }
+        }, (error) => {
+            console.error('Firebase listener error:', error);
+            updateConnectionStatus(false);
+        });
+
+        // Event listeners
+        clickBlocker.addEventListener('click', showBlockedMessage);
         fullscreenBtn.addEventListener('click', toggleFullScreen);
+
+        // Initial connection attempt
+        updateConnectionStatus(false);
+        
+        // Cleanup listener on page unload
+        window.addEventListener('beforeunload', () => {
+            unsubscribe();
+        });
     </script>
 </body>
 </html>
