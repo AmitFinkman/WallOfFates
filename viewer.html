@@ -77,13 +77,14 @@
     <div id="message-box">Only the manager can interact with the board.</div>
 
     <script type="module">
-        // Firebase imports
+        // Firebase imports - Using Realtime Database instead of Firestore
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyCudE7pr3G1J1CYT3qL9_GsVEKs00-Sye0",
             authDomain: "wall-of-fates.firebaseapp.com",
+            databaseURL: "https://wall-of-fates-default-rtdb.europe-west1.firebasedatabase.app/", // Your Realtime Database URL
             projectId: "wall-of-fates",
             storageBucket: "wall-of-fates.appspot.com",
             messagingSenderId: "767396028639",
@@ -92,8 +93,8 @@
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const gameStateRef = doc(db, "games", "live-game");
+        const database = getDatabase(app);
+        const gameStateRef = ref(database, 'gameState');
 
         // DOM elements
         const teamColorPalette = document.getElementById('team-color-palette');
@@ -122,7 +123,7 @@
 
         // Render the game board based on Firebase data
         function renderBoard(gameState) {
-            console.log('Rendering board with state:', gameState);
+            console.log('📋 VIEWER: Rendering board with state:', gameState);
             
             // Clear existing content
             gameGrid.innerHTML = '';
@@ -188,34 +189,39 @@
         }
 
         // Set up Firebase listener
-        console.log('Setting up Firebase listener...');
+        console.log('🔗 VIEWER: Setting up Firebase Realtime Database listener...');
         
-        const unsubscribe = onSnapshot(gameStateRef, (doc) => {
+        onValue(gameStateRef, (snapshot) => {
+            console.log('📡 VIEWER: Received Firebase update');
             updateConnectionStatus(true);
             
-            if (doc.exists()) {
-                const gameState = doc.data();
-                console.log('Received Firebase update:', gameState);
+            if (snapshot.exists()) {
+                const gameState = snapshot.val();
+                console.log('📄 VIEWER: Data exists:', gameState);
+                console.log('📄 VIEWER: Cards array:', gameState.cards);
+                console.log('📄 VIEWER: Cards length:', gameState.cards ? gameState.cards.length : 'undefined');
                 
                 // Check if game has started (has cards)
-                if (gameState.cards && gameState.cards.length > 0) {
-                    console.log('Game data found, showing game content');
+                if (gameState.cards && Array.isArray(gameState.cards) && gameState.cards.length > 0) {
+                    console.log('✅ VIEWER: Game data found, showing game content');
                     waitingMessage.classList.add('hidden');
                     gameContent.classList.remove('hidden');
                     renderBoard(gameState);
                 } else {
-                    console.log('No game data, showing waiting message');
+                    console.log('⏳ VIEWER: No valid game data, showing waiting message');
+                    console.log('⏳ VIEWER: gameState.cards is:', gameState.cards);
                     waitingMessage.classList.remove('hidden');
                     gameContent.classList.add('hidden');
                 }
             } else {
-                console.log('Document does not exist, showing waiting message');
+                console.log('❌ VIEWER: No data exists, showing waiting message');
                 waitingMessage.classList.remove('hidden');
                 gameContent.classList.add('hidden');
             }
         }, (error) => {
-            console.error('Firebase listener error:', error);
+            console.error('❌ VIEWER: Firebase listener error:', error);
             updateConnectionStatus(false);
+            alert('Firebase connection error: ' + error.message);
         });
 
         // Event listeners
@@ -224,11 +230,6 @@
 
         // Initial connection attempt
         updateConnectionStatus(false);
-        
-        // Cleanup listener on page unload
-        window.addEventListener('beforeunload', () => {
-            unsubscribe();
-        });
     </script>
 </body>
 </html>
