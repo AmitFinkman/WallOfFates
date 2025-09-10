@@ -42,7 +42,7 @@
 
     <!-- SCRIPT SECTION -->
     <script type="module">
-        // Import the required functions from the Firebase SDK
+        // FIX: Import the required functions from the modern Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -55,7 +55,7 @@
             appId: "1:767396028639:web:132afadf66ae304226496a"
         };
 
-        // Initialize Firebase using the modern syntax
+        // FIX: Initialize Firebase using the modern syntax
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const gameStateRef = doc(db, "games", "live-game");
@@ -98,4 +98,3 @@
     </script>
 </body>
 </html>
-
