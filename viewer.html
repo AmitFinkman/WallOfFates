@@ -18,17 +18,14 @@
 <body class="min-h-screen flex items-center justify-center p-4">
     <div class="w-full max-w-7xl mx-auto">
         <div id="viewer-screen">
-            <!-- This message shows when the page first loads -->
             <div id="waiting-message" class="text-center">
                 <h1 class="text-3xl font-bold text-white mb-4" style="font-family:'Rubik',sans-serif">Wall of Fates</h1>
                 <p class="text-xl text-gray-400">Waiting for the manager to start the game...</p>
             </div>
-
-            <!-- This section is hidden until the manager starts the game -->
             <div id="game-content" class="hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h1 class="text-3xl font-bold text-white" style="font-family:'Rubik',sans-serif">Wall of Fates</h1>
-                    <div><button id="fullscreen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition mr-2">Full Screen</button></div>
+                    <div><button id="fullscreen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Full Screen</button></div>
                 </div>
                 <div class="mb-6">
                     <p class="text-center text-gray-400 mb-3">Game in Progress</p>
@@ -36,7 +33,6 @@
                 </div>
                 <div id="game-grid-container" class="relative">
                     <div id="game-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4"></div>
-                    <!-- This invisible div blocks clicks and shows a message -->
                     <div id="click-blocker"></div>
                 </div>
             </div>
@@ -44,10 +40,12 @@
     </div>
     <div id="message-box">Only the manager can interact with the board.</div>
 
-    <!-- START: Firebase Scripts -->
-    <!-- FIX: Updated to a newer, more stable version of the Firebase SDK -->
+    <!-- SCRIPT SECTION -->
     <script type="module">
-        // This configuration connects this page to YOUR Firebase project.
+        // Import the required functions from the Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
         const firebaseConfig = {
             apiKey: "AIzaSyCudE7pr3G1J1CYT3qL9_GsVEKs00-Sye0",
             authDomain: "wall-of-fates.firebaseapp.com",
@@ -57,28 +55,16 @@
             appId: "1:767396028639:web:132afadf66ae304226496a"
         };
 
-        // FIX: Import functions from the new SDK
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        // FIX: Initialize Firebase using the new modular syntax
+        // Initialize Firebase using the modern syntax
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const gameStateRef = doc(db, "games", "live-game");
 
-        const teamColorPalette = document.getElementById('team-color-palette');
-        const gameGrid = document.getElementById('game-grid');
-        const fullscreenBtn = document.getElementById('fullscreen-btn');
-        const waitingMessage = document.getElementById('waiting-message');
-        const gameContent = document.getElementById('game-content');
-        const clickBlocker = document.getElementById('click-blocker');
-        const messageBox = document.getElementById('message-box');
+        const teamColorPalette = document.getElementById('team-color-palette'), gameGrid = document.getElementById('game-grid'), fullscreenBtn = document.getElementById('fullscreen-btn'), waitingMessage = document.getElementById('waiting-message'), gameContent = document.getElementById('game-content'), clickBlocker = document.getElementById('click-blocker'), messageBox = document.getElementById('message-box');
 
         // This is the core real-time function. It listens for any change in the database.
-        // FIX: Updated to use the new onSnapshot syntax
         onSnapshot(gameStateRef, (doc) => {
             const docData = doc.data();
-            // Check if the game document exists and has data
             if (doc.exists() && docData && docData.cards && docData.cards.length > 0) {
                 console.log("Received update from Firebase. Rendering board.");
                 waitingMessage.classList.add('hidden');
@@ -92,50 +78,24 @@
         });
 
         function renderBoard(state) {
-            gameGrid.innerHTML = '';
-            teamColorPalette.innerHTML = '';
-
-            if (state.teamColors) {
-                state.teamColors.forEach(color => {
-                    const colorDiv = document.createElement('div');
-                    colorDiv.className = 'palette-color w-10 h-10 rounded-md';
-                    colorDiv.style.backgroundColor = color;
-                    teamColorPalette.appendChild(colorDiv);
-                });
-            }
-
+            gameGrid.innerHTML = ''; teamColorPalette.innerHTML = '';
+            if (state.teamColors) { state.teamColors.forEach(c => { const div = document.createElement('div'); div.className = 'palette-color w-10 h-10 rounded-md'; div.style.backgroundColor = c; teamColorPalette.appendChild(div); }); }
             if (state.cards) {
                 state.cards.forEach(item => {
-                    const cardContainer = document.createElement('div');
-                    cardContainer.className = 'aspect-square relative';
-                    const card = document.createElement('div');
-                    card.className = 'card w-full h-full';
-                    if (item.isFlipped) {
-                        card.classList.add('is-flipped');
-                    }
-                    const cardFront = document.createElement('div');
-                    cardFront.className = 'card-face card-face-front';
-                    cardFront.style.backgroundColor = item.color || '#374151';
-                    cardFront.innerHTML = `<span class="text-4xl font-bold text-white">${item.entry}</span>`;
-                    const cardBack = document.createElement('div');
-                    cardBack.className = 'card-face card-face-back';
-                    cardBack.innerHTML = `<span class="text-4xl font-bold text-white">${item.secret}</span>`;
-                    card.appendChild(cardFront); card.appendChild(cardBack); cardContainer.appendChild(card); gameGrid.appendChild(cardContainer);
+                    const cont = document.createElement('div'); cont.className = 'aspect-square relative';
+                    const card = document.createElement('div'); card.className = 'card w-full h-full'; if (item.isFlipped) card.classList.add('is-flipped');
+                    const front = document.createElement('div'); front.className = 'card-face card-face-front'; front.style.backgroundColor = item.color || '#374151'; front.innerHTML = `<span class="text-4xl font-bold text-white">${item.entry}</span>`;
+                    const back = document.createElement('div'); back.className = 'card-face card-face-back'; back.innerHTML = `<span class="text-4xl font-bold text-white">${item.secret}</span>`;
+                    card.append(front, back); cont.append(card); gameGrid.append(cont);
                 });
             }
         }
         
         let messageTimeout;
-        clickBlocker.addEventListener('click', () => {
-            clearTimeout(messageTimeout);
-            messageBox.classList.add('show');
-            messageTimeout = setTimeout(() => {
-                messageBox.classList.remove('show');
-            }, 2000);
-        });
-
-        function toggleFullScreen(){if(!document.fullscreenElement){document.documentElement.requestFullscreen().catch(err=>console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`))}else{if(document.exitFullscreen){document.exitFullscreen()}}}
+        clickBlocker.onclick = () => { clearTimeout(messageTimeout); messageBox.classList.add('show'); messageTimeout = setTimeout(() => messageBox.classList.remove('show'), 2000); };
+        function toggleFullScreen(){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(err=>console.error("Fullscreen error",err))}
         fullscreenBtn.addEventListener('click', toggleFullScreen);
     </script>
 </body>
 </html>
+
