@@ -19,30 +19,25 @@
             <p class="text-center text-gray-400 mb-8">Set up your game board.</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-4">
-                    <div><label for="num-entries" class="block mb-2 text-sm font-medium text-gray-300">How many entries on the wall?</label><input type="number" id="num-entries" value="24" min="1" max="100" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"></div>
-                    <div><label for="num-colors" class="block mb-2 text-sm font-medium text-gray-300">How many colors to use?</label><input type="number" id="num-colors" value="4" min="1" max="10" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5"></div>
+                    <div><label for="num-entries" class="block mb-2 text-sm font-medium text-gray-300">How many entries?</label><input type="number" id="num-entries" value="24" min="1" max="100" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5"></div>
+                    <div><label for="num-colors" class="block mb-2 text-sm font-medium text-gray-300">How many colors?</label><input type="number" id="num-colors" value="4" min="1" max="10" class="bg-gray-700 border border-gray-600 text-white text-sm rounded-lg block w-full p-2.5"></div>
                 </div>
-                <div><label class="block mb-2 text-sm font-medium text-gray-300">Choose your colors</label>
-                    <div id="color-pickers-container" class="flex flex-wrap gap-4 p-4 bg-gray-700 rounded-lg"></div>
-                </div>
+                <div><label class="block mb-2 text-sm font-medium text-gray-300">Choose your colors</label><div id="color-pickers-container" class="flex flex-wrap gap-4 p-4 bg-gray-700 rounded-lg"></div></div>
             </div>
-            <div class="mt-8 text-center"><button id="start-game-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg text-lg transition-transform transform hover:scale-105 shadow-lg">Build the Wall & Start Game</button></div>
+            <div class="mt-8 text-center"><button id="start-game-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg text-lg">Build the Wall & Start</button></div>
         </div>
         <div id="game-screen" class="hidden transition-opacity duration-500">
             <div class="flex justify-between items-center mb-6">
                 <h1 class="text-3xl font-bold text-white" style="font-family:'Rubik',sans-serif">Wall of Fates</h1>
-                <div><button id="fullscreen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition mr-2">Full Screen</button><button id="toggle-key-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition mr-2">Show Game Key</button><button id="reset-game-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition">New Game</button></div>
+                <div><button id="fullscreen-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg">Full Screen</button><button id="toggle-key-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg">Show Key</button><button id="reset-game-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg">New Game</button></div>
             </div>
             <div class="mb-6">
-                <p class="text-center text-gray-400 mb-3">Select a team color to claim an entry</p>
-                <div id="team-color-palette" class="flex justify-center items-center flex-wrap gap-4 p-2 rounded-lg bg-gray-900/50"></div>
+                <p class="text-center text-gray-400 mb-3">Select a color to claim an entry</p><div id="team-color-palette" class="flex justify-center items-center flex-wrap gap-4 p-2 rounded-lg bg-gray-900/50"></div>
             </div>
             <div id="game-grid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4"></div>
             <div id="game-key-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
                 <div class="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-2xl font-bold">Game Master's Key</h2><button id="close-key-btn" class="text-gray-400 hover:text-white">&times;</button>
-                    </div>
+                    <div class="flex justify-between items-center mb-4"><h2 class="text-2xl font-bold">Game Master's Key</h2><button id="close-key-btn" class="text-gray-400 hover:text-white text-3xl">&times;</button></div>
                     <div id="game-key-content" class="text-left bg-gray-900 p-4 rounded-md"></div>
                     <div class="mt-4 text-right"><button id="copy-key-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg">Copy Key</button></div>
                 </div>
@@ -50,13 +45,12 @@
         </div>
     </div>
 
-    <!-- START: Firebase Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <!-- END: Firebase Scripts -->
+    <!-- SCRIPT SECTION -->
+    <script type="module">
+        // Import the required functions from the Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    <script>
-        // PASTE YOUR FIREBASE CONFIG HERE
         const firebaseConfig = {
             apiKey: "AIzaSyCudE7pr3G1J1CYT3qL9_GsVEKs00-Sye0",
             authDomain: "wall-of-fates.firebaseapp.com",
@@ -66,114 +60,67 @@
             appId: "1:767396028639:web:132afadf66ae304226496a"
         };
 
-        // Initialize Firebase and Firestore
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const gameStateRef = db.collection("games").doc("live-game");
+        // Initialize Firebase using the modern syntax
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const gameStateRef = doc(db, "games", "live-game");
 
-        const setupScreen = document.getElementById('setup-screen');
-        const gameScreen = document.getElementById('game-screen');
-        const numEntriesInput = document.getElementById('num-entries');
-        const numColorsInput = document.getElementById('num-colors');
-        const colorPickersContainer = document.getElementById('color-pickers-container');
-        const startGameBtn = document.getElementById('start-game-btn');
-        const resetGameBtn = document.getElementById('reset-game-btn');
-        const teamColorPalette = document.getElementById('team-color-palette');
-        const gameGrid = document.getElementById('game-grid');
-        const gameKeyModal = document.getElementById('game-key-modal');
-        const gameKeyContent = document.getElementById('game-key-content');
-        const toggleKeyBtn = document.getElementById('toggle-key-btn');
-        const closeKeyBtn = document.getElementById('close-key-btn');
-        const copyKeyBtn = document.getElementById('copy-key-btn');
-        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        // DOM Elements
+        const setupScreen = document.getElementById('setup-screen'), gameScreen = document.getElementById('game-screen'), numEntriesInput = document.getElementById('num-entries'), numColorsInput = document.getElementById('num-colors'), colorPickersContainer = document.getElementById('color-pickers-container'), startGameBtn = document.getElementById('start-game-btn'), resetGameBtn = document.getElementById('reset-game-btn'), teamColorPalette = document.getElementById('team-color-palette'), gameGrid = document.getElementById('game-grid'), gameKeyModal = document.getElementById('game-key-modal'), gameKeyContent = document.getElementById('game-key-content'), toggleKeyBtn = document.getElementById('toggle-key-btn'), closeKeyBtn = document.getElementById('close-key-btn'), copyKeyBtn = document.getElementById('copy-key-btn'), fullscreenBtn = document.getElementById('fullscreen-btn');
         const defaultColors = ['#4f46e5', '#db2777', '#d97706', '#16a34a', '#0891b2', '#6d28d9', '#4f46e5', '#db2777', '#d97706', '#16a34a'];
-        let gameData = [];
-        let activeColor = null;
+        let gameData = [], activeColor = null;
 
         function generateColorPickers(){const e=parseInt(numColorsInput.value,10);colorPickersContainer.innerHTML="";for(let t=0;t<e;t++){const e=document.createElement("input");e.type="color",e.className="color-picker rounded-lg",e.value=defaultColors[t%defaultColors.length],colorPickersContainer.appendChild(e)}}function shuffleArray(e){for(let t=e.length-1;t>0;t--){const o=Math.floor(Math.random()*(t+1));[e[t],e[o]]=[e[o],e[t]]}return e}function generateSecretScores(e){const t=[],o=[{score:500,weight:2},{score:400,weight:3},{score:300,weight:4},{score:200,weight:5},{score:150,weight:6},{score:100,weight:7},{score:0,weight:8}];e>0&&t.push(1e3);const r=e-1;if(r>0){const e=o.flatMap(e=>Array(e.weight).fill(e.score));0===e.length&&e.push(0);for(let o=0;o<r;o++){const o=Math.floor(Math.random()*e.length);t.push(e[o])}}return t}
+        
         function startGame() {
-            const numEntries = parseInt(numEntriesInput.value, 10);
-            const colorPickers = colorPickersContainer.querySelectorAll('.color-picker');
-            const colors = Array.from(colorPickers).map(picker => picker.value);
-            const secretNumbers = shuffleArray(generateSecretScores(numEntries));
+            const numEntries = parseInt(numEntriesInput.value, 10), colors = Array.from(colorPickersContainer.querySelectorAll('.color-picker')).map(p => p.value), secretNumbers = shuffleArray(generateSecretScores(numEntries));
             gameGrid.innerHTML = ''; teamColorPalette.innerHTML = ''; gameData = []; activeColor = null;
-            colors.forEach(color => {
-                const colorDiv = document.createElement('div');
-                colorDiv.className = 'palette-color w-10 h-10 rounded-md cursor-pointer transition-transform';
-                colorDiv.style.backgroundColor = color;
-                colorDiv.dataset.color = color;
-                colorDiv.addEventListener('click', (e) => {
-                    document.querySelector('.palette-color.selected')?.classList.remove('selected');
-                    e.currentTarget.classList.add('selected');
-                    activeColor = e.currentTarget.dataset.color;
-                });
-                teamColorPalette.appendChild(colorDiv);
-            });
-            for (let i = 0; i < numEntries; i++) {
-                const entryNumber = i + 1;
-                gameData.push({ entry: entryNumber, secret: secretNumbers[i], color: null, isFlipped: false });
-                const cardContainer = document.createElement('div');
-                cardContainer.className = 'aspect-square relative';
-                const card = document.createElement('div');
-                card.className = 'card w-full h-full';
-                card.dataset.entry = entryNumber;
-                const cardFront = document.createElement('div');
-                cardFront.className = 'card-face card-face-front';
-                cardFront.style.backgroundColor = '#374151';
-                cardFront.innerHTML = `<span class="text-4xl font-bold text-white">${entryNumber}</span>`;
-                const cardBack = document.createElement('div');
-                cardBack.className = 'card-face card-face-back';
-                cardBack.innerHTML = `<span class="text-4xl font-bold text-white">${secretNumbers[i]}</span>`;
-                card.appendChild(cardFront); card.appendChild(cardBack); cardContainer.appendChild(card); gameGrid.appendChild(cardContainer);
-                card.addEventListener('click', () => handleCardClick(card, cardFront));
+            colors.forEach(c => { const div = document.createElement('div'); div.className = 'palette-color w-10 h-10 rounded-md cursor-pointer transition-transform'; div.style.backgroundColor = c; div.dataset.color = c; div.onclick = e => { document.querySelector('.palette-color.selected')?.classList.remove('selected'); e.currentTarget.classList.add('selected'); activeColor = e.currentTarget.dataset.color; }; teamColorPalette.appendChild(div); });
+            for (let i=0; i<numEntries; i++) {
+                gameData.push({ entry: i + 1, secret: secretNumbers[i], color: null, isFlipped: false });
+                const cont = document.createElement('div'); cont.className = 'aspect-square relative';
+                const card = document.createElement('div'); card.className = 'card w-full h-full'; card.dataset.entry = i + 1;
+                const front = document.createElement('div'); front.className = 'card-face card-face-front'; front.style.backgroundColor = '#374151'; front.innerHTML = `<span class="text-4xl font-bold text-white">${i + 1}</span>`;
+                const back = document.createElement('div'); back.className = 'card-face card-face-back'; back.innerHTML = `<span class="text-4xl font-bold text-white">${secretNumbers[i]}</span>`;
+                card.append(front, back); cont.append(card); gameGrid.append(cont);
+                card.onclick = () => handleCardClick(card, front);
             }
             populateGameKey();
             setupScreen.classList.add('opacity-0');
-            setTimeout(() => {
-                setupScreen.classList.add('hidden');
-                gameScreen.classList.remove('hidden');
-                gameScreen.classList.add('opacity-100');
-            }, 500);
+            setTimeout(() => { setupScreen.classList.add('hidden'); gameScreen.classList.remove('hidden'); gameScreen.classList.add('opacity-100'); }, 500);
             updateGameStateInFirebase(colors);
         }
-        function handleCardClick(card, cardFront) {
-            const entryNumber = parseInt(card.dataset.entry, 10);
-            const entryData = gameData.find(item => item.entry === entryNumber);
-            if (entryData.isFlipped) { return; }
-            if (entryData.color) {
-                entryData.isFlipped = true;
-                card.classList.add('is-flipped');
-            } else {
-                if (activeColor) {
-                    entryData.color = activeColor;
-                    cardFront.style.backgroundColor = activeColor;
-                } else {
-                    alert("Please select a team color first!");
-                }
-            }
+
+        function handleCardClick(card, front) {
+            const entryData = gameData.find(i => i.entry == card.dataset.entry);
+            if (entryData.isFlipped) return;
+            if (entryData.color) { entryData.isFlipped = true; card.classList.add('is-flipped'); } 
+            else if (activeColor) { entryData.color = activeColor; front.style.backgroundColor = activeColor; } 
+            else { alert("Please select a team color first!"); return; }
             updateGameStateInFirebase();
         }
-        function populateGameKey(){gameKeyContent.innerHTML="";const e=[...gameData].sort((e,t)=>e.secret-t.secret),t=document.createElement("ul");t.className="space-y-2 font-mono",e.forEach(e=>{const o=document.createElement("li");o.innerHTML=`<pre>Entry #${String(e.entry).padStart(2,"0")} -> Reveals: ${String(e.secret).padStart(4," ")}</pre>`,t.appendChild(o)}),gameKeyContent.appendChild(t)}
+
         function resetGame() {
-            gameScreen.classList.remove('opacity-100');
-            gameScreen.classList.add('hidden');
-            setupScreen.classList.remove('hidden');
-            setupScreen.classList.remove('opacity-0');
+            gameScreen.classList.remove('opacity-100'); gameScreen.classList.add('hidden');
+            setupScreen.classList.remove('hidden'); setupScreen.classList.remove('opacity-0');
             gameKeyModal.classList.add('hidden');
-            // Also reset the state in Firebase
-            gameStateRef.set({ cards: [], teamColors: [] });
+            updateGameStateInFirebase(null, true); // Reset state in Firebase
         }
-        function copyKeyToClipboard(){const e=gameData.map(e=>`Entry #${e.entry} -> Reveals: ${e.secret}`).join("\n");navigator.clipboard.writeText(e).then(()=>{const e=copyKeyBtn.textContent;copyKeyBtn.textContent="Copied!",setTimeout(()=>{copyKeyBtn.textContent=e},2e3)}).catch(e=>console.error("Failed to copy: ",e))}function toggleFullScreen(){document.fullscreenElement?document.exitFullscreen&&document.exitFullscreen():document.documentElement.requestFullscreen().catch(e=>console.error(`Fullscreen error: ${e.message}`))}
-        function updateGameStateInFirebase(colors) {
-            const state = {
-                cards: gameData,
-                ...(colors && { teamColors: colors }),
-                lastUpdated: new Date()
-            };
-            gameStateRef.set(state, { merge: true })
-                .then(() => console.log("Game state updated in Firebase!"))
-                .catch((error) => console.error("Error updating Firebase: ", error));
+
+        async function updateGameStateInFirebase(colors, isReset = false) {
+            try {
+                const state = isReset ? { cards: [], teamColors: [] } : { cards: gameData, ...(colors && { teamColors: colors }), lastUpdated: new Date().toISOString() };
+                await setDoc(gameStateRef, state);
+                console.log("Game state updated successfully.");
+            } catch (error) {
+                console.error("Error updating Firebase: ", error);
+            }
         }
+
+        function populateGameKey(){gameKeyContent.innerHTML="";const e=[...gameData].sort((a,b)=>a.secret-b.secret),t=document.createElement("ul");t.className="space-y-2 font-mono",e.forEach(i=>{const li=document.createElement("li");li.innerHTML=`<pre>Entry #${String(i.entry).padStart(2,"0")} -> Reveals: ${String(i.secret).padStart(4," ")}</pre>`,t.appendChild(li)}),gameKeyContent.appendChild(t)}
+        function copyKeyToClipboard(){const text=gameData.map(i=>`Entry #${i.entry} -> Reveals: ${i.secret}`).join("\n");navigator.clipboard.writeText(text).then(()=>{const orig=copyKeyBtn.textContent;copyKeyBtn.textContent="Copied!",setTimeout(()=>copyKeyBtn.textContent=orig,2e3)}).catch(err=>console.error("Failed to copy",err))}
+        function toggleFullScreen(){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(err=>console.error("Fullscreen error",err))}
+        
         window.addEventListener('load',generateColorPickers);numColorsInput.addEventListener('change',generateColorPickers);startGameBtn.addEventListener('click',startGame);resetGameBtn.addEventListener('click',resetGame);toggleKeyBtn.addEventListener('click',()=>gameKeyModal.classList.remove('hidden'));closeKeyBtn.addEventListener('click',()=>gameKeyModal.classList.add('hidden'));copyKeyBtn.addEventListener('click',copyKeyToClipboard);fullscreenBtn.addEventListener('click',toggleFullScreen);gameKeyModal.addEventListener('click',e=>{if(e.target===gameKeyModal)gameKeyModal.classList.add('hidden')});
     </script>
 </body>
